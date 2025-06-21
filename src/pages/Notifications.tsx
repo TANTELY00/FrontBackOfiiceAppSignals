@@ -20,13 +20,19 @@ const Notifications = () => {
   const navigate = useNavigate()
 
   const [users] = useState<User[]>([
-    { id: 1, nom: 'Rabe', prenom: 'John', adresse: 'Antananarivo', telephone: '0341234567' },
-    { id: 2, nom: 'Rakoto', prenom: 'Mina', adresse: 'Fianarantsoa', telephone: '0337654321' },
+    { id: 1, nom: 'Tantely', prenom: 'Ravoson', adresse: 'Tsimbazaza', telephone: '0341234567' },
+    { id: 2, nom: 'Lalaina', prenom: 'Raharintsalama', adresse: 'Analakely', telephone: '0337654321' },
+     { id: 3, nom: 'Anselme', prenom: 'Nicolas', adresse: 'Tsimbazaza', telephone: '0341234567' },
+    { id: 4, nom: 'Sarobidy', prenom: 'Ny Aina', adresse: 'Ankatso', telephone: '0337654321' },
+    { id: 5, nom: 'Hasina', prenom: 'Fenosoa', adresse: 'Mahamasina', telephone: '0340102223' },
   ])
 
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: 1, userId: 1, message: 'Incident réseau signalé', date: '2025-06-20' },
     { id: 2, userId: 2, message: 'Demande d\'assistance logicielle', date: '2025-06-21' },
+    { id: 3, userId: 3, message: 'Demande de pompier', date: '2025-06-21' },
+     { id: 4, userId: 4, message: 'Demande des plombiers', date: '2025-06-21' },
+     { id: 5, userId: 5, message: 'Incident rdes polices', date: '2025-06-21' }
   ])
 
   const [searchTerm, setSearchTerm] = useState('')
