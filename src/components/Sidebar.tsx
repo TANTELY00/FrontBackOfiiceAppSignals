@@ -4,10 +4,14 @@ import { NavLink } from 'react-router-dom'
 
 const Sidebar: React.FC = () => {
   return (
-    <aside className="bg-indigo-900 text-white w-64 min-h-screen p-4 flex flex-col">
+    <aside className="bg-[#1c434e] text-white w-64 min-h-screen p-4 flex flex-col">
       {/* Logo / Titre */}
-      <div className="text-2xl font-bold mb-6">
-        Admin Intelligent
+      <div className="text-2xl font-bold ml-[-6px] mb-7 flex items-center justify-center relative">
+         <img
+              src="/images/heylogo.png"
+              alt="Illustration utilisateur"
+              className="border-none w-30 h-15 object-cover mt-[-10px] "
+            />
       </div>
 
       {/* Menu avec marge en haut */}

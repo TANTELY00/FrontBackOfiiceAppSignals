@@ -1,57 +1,71 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import api from '../api'
 
 interface User {
-  id: number
+  _id: string
   nom: string
   prenom: string
   adresse: string
 }
 
 const Users = () => {
-  const [users, setUsers] = useState<User[]>([
-    { id: 1, nom: 'Rabe', prenom: 'John', adresse: 'Antananarivo' },
-    { id: 2, nom: 'Rakoto', prenom: 'Mina', adresse: 'Fianarantsoa' },
-    { id: 3, nom: 'Ando', prenom: 'Lova', adresse: 'Toamasina' },
-  ])
-
+  const [users, setUsers] = useState<User[]>([])
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
     adresse: ''
   })
-
   const [searchTerm, setSearchTerm] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/utilisateurs')
+      setUsers(response.data)
+    } catch (error) {
+      console.error('Erreur de chargement utilisateurs', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newUser = {
-      id: users.length + 1,
-      ...formData
+    try {
+      if (editingId) {
+        await api.patch(`/utilisateurs/${editingId}`, formData)
+        setEditingId(null)
+      } else {
+        await api.post('/utilisateurs', formData)
+      }
+      setFormData({ nom: '', prenom: '', adresse: '' })
+      fetchUsers()
+    } catch (error) {
+      console.error('Erreur enregistrement utilisateur', error)
     }
-    setUsers([...users, newUser])
-    setFormData({ nom: '', prenom: '', adresse: '' })
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('Confirmer la suppression de cet utilisateur ?')) {
-      setUsers(users.filter(user => user.id !== id))
+  // Suppression statique côté frontend uniquement (pas d'appel API)
+  const handleDelete = (id: string) => {
+    if (confirm('Confirmer la suppression ?')) {
+      setUsers(prevUsers => prevUsers.filter(user => user._id !== id))
+      console.log(`Utilisateur ${id} supprimé localement`)
     }
   }
 
-  const handleEdit = (id: number) => {
-    const userToEdit = users.find(user => user.id === id)
-    if (userToEdit) {
-      setFormData({
-        nom: userToEdit.nom,
-        prenom: userToEdit.prenom,
-        adresse: userToEdit.adresse
-      })
-      setUsers(users.filter(user => user.id !== id))
-    }
+  const handleEdit = (user: User) => {
+    setFormData({
+      nom: user.nom,
+      prenom: user.prenom,
+      adresse: user.adresse
+    })
+    setEditingId(user._id)
   }
 
   const filteredUsers = users.filter(user =>
@@ -60,9 +74,10 @@ const Users = () => {
 
   return (
     <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-      {/* Formulaire */}
       <div className="md:col-span-1 bg-white rounded shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Ajouter un utilisateur</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {editingId ? 'Modifier' : 'Ajouter'} un utilisateur
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -91,17 +106,30 @@ const Users = () => {
             className="w-full border p-2 rounded"
             required
           />
-          <button type="submit" className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700">
-            Ajouter
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700"
+          >
+            {editingId ? 'Enregistrer les modifications' : 'Ajouter'}
           </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({ nom: '', prenom: '', adresse: '' })
+                setEditingId(null)
+              }}
+              className="w-full bg-gray-400 text-white p-2 rounded hover:bg-gray-500"
+            >
+              Annuler
+            </button>
+          )}
         </form>
       </div>
 
-      {/* Liste des utilisateurs */}
       <div className="md:col-span-2 bg-white rounded shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Liste des utilisateurs</h2>
 
-        {/* Barre de recherche */}
         <input
           type="text"
           value={searchTerm}
@@ -110,7 +138,6 @@ const Users = () => {
           className="w-full border p-2 rounded mb-4"
         />
 
-        {/* Tableau */}
         <table className="w-full border text-left">
           <thead>
             <tr className="bg-gray-100">
@@ -121,20 +148,27 @@ const Users = () => {
             </tr>
           </thead>
           <tbody>
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={4} className="p-4 text-center text-gray-500">
+                  Aucun utilisateur trouvé.
+                </td>
+              </tr>
+            )}
             {filteredUsers.map(user => (
-              <tr key={user.id} className="hover:bg-gray-50">
+              <tr key={user._id} className="hover:bg-gray-50">
                 <td className="p-2 border">{user.nom}</td>
                 <td className="p-2 border">{user.prenom}</td>
                 <td className="p-2 border">{user.adresse}</td>
                 <td className="p-2 border text-center space-x-2">
                   <button
-                    onClick={() => handleEdit(user.id)}
+                    onClick={() => handleEdit(user)}
                     className="bg-yellow-400 hover:bg-yellow-500 text-white py-1 px-2 rounded text-sm"
                   >
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDelete(user.id)}
+                    onClick={() => handleDelete(user._id)}
                     className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-sm"
                   >
                     Supprimer
@@ -142,11 +176,6 @@ const Users = () => {
                 </td>
               </tr>
             ))}
-            {filteredUsers.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-500">Aucun utilisateur trouvé.</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

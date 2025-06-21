@@ -1,75 +1,94 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../api' // assure-toi que ce chemin est correct
 
-interface Technician {
-  id: number
+interface User {
+  _id: string
   nom: string
   prenom: string
   adresse: string
-  status: boolean
 }
 
-const Technicians = () => {
-  const [technicians, setTechnicians] = useState<Technician[]>([
-    { id: 1, nom: 'Rabe', prenom: 'John', adresse: 'Antananarivo', status: true },
-    { id: 2, nom: 'Rakoto', prenom: 'Mina', adresse: 'Fianarantsoa', status: false },
-    { id: 3, nom: 'Ando', prenom: 'Lova', adresse: 'Toamasina', status: true },
-  ])
-
+const Technicien = () => {
+  const [users, setUsers] = useState<User[]>([])
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
-    adresse: '',
-    status: false
+    adresse: ''
   })
-
   const [searchTerm, setSearchTerm] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
+  // Charge les utilisateurs depuis backend
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/utilisateurs')
+      setUsers(response.data)
+    } catch (error) {
+      console.error('Erreur de chargement utilisateurs', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  // Met à jour formData au changement des inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    })
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Ajout ou modification selon editingId
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newTechnician = {
-      id: technicians.length + 1,
-      ...formData
-    }
-    setTechnicians([...technicians, newTechnician])
-    setFormData({ nom: '', prenom: '', adresse: '', status: false })
-  }
-
-  const handleDelete = (id: number) => {
-    if (confirm('Confirmer la suppression de ce technicien ?')) {
-      setTechnicians(technicians.filter(tech => tech.id !== id))
-    }
-  }
-
-  const handleEdit = (id: number) => {
-    const techToEdit = technicians.find(tech => tech.id === id)
-    if (techToEdit) {
-      setFormData({
-        nom: techToEdit.nom,
-        prenom: techToEdit.prenom,
-        adresse: techToEdit.adresse,
-        status: techToEdit.status
-      })
-      setTechnicians(technicians.filter(tech => tech.id !== id))
+    try {
+      if (editingId) {
+        await api.patch(`/utilisateurs/${editingId}`, formData)
+        setEditingId(null)
+      } else {
+        await api.post('/utilisateurs', formData)
+      }
+      setFormData({ nom: '', prenom: '', adresse: '' })
+      fetchUsers()
+    } catch (error) {
+      console.error('Erreur enregistrement utilisateur', error)
     }
   }
 
-  const filteredTechnicians = technicians.filter(tech =>
-    `${tech.nom} ${tech.prenom}`.toLowerCase().includes(searchTerm.toLowerCase())
+  // Suppression utilisateur via API
+  const handleDelete = async (id: string) => {
+    if (confirm('Confirmer la suppression ?')) {
+      try {
+        await api.delete(`/utilisateurs/${id}`)
+        setUsers(prevUsers => prevUsers.filter(user => user._id !== id))
+        console.log(`Utilisateur ${id} supprimé.`)
+      } catch (error) {
+        console.error('Erreur suppression', error)
+      }
+    }
+  }
+
+  // Prépare formulaire pour édition
+  const handleEdit = (user: User) => {
+    setFormData({
+      nom: user.nom,
+      prenom: user.prenom,
+      adresse: user.adresse
+    })
+    setEditingId(user._id)
+  }
+
+  // Filtre la liste selon recherche
+  const filteredUsers = users.filter(user =>
+    `${user.nom} ${user.prenom}`.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
     <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-      {/* Formulaire */}
+      {/* Formulaire ajout/modification */}
       <div className="md:col-span-1 bg-white rounded shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Ajouter un technicien</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {editingId ? 'Modifier' : 'Ajouter'} un utilisateur
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -98,27 +117,31 @@ const Technicians = () => {
             className="w-full border p-2 rounded"
             required
           />
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              name="status"
-              checked={formData.status}
-              onChange={handleChange}
-              className="border"
-            />
-            <span>Disponible</span>
-          </label>
-          <button type="submit" className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700">
-            Ajouter
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700"
+          >
+            {editingId ? 'Enregistrer les modifications' : 'Ajouter'}
           </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({ nom: '', prenom: '', adresse: '' })
+                setEditingId(null)
+              }}
+              className="w-full bg-gray-400 text-white p-2 rounded hover:bg-gray-500"
+            >
+              Annuler
+            </button>
+          )}
         </form>
       </div>
 
-      {/* Liste des techniciens */}
+      {/* Liste des utilisateurs */}
       <div className="md:col-span-2 bg-white rounded shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Liste des techniciens</h2>
+        <h2 className="text-xl font-semibold mb-4">Liste des utilisateurs</h2>
 
-        {/* Barre de recherche */}
         <input
           type="text"
           value={searchTerm}
@@ -127,39 +150,37 @@ const Technicians = () => {
           className="w-full border p-2 rounded mb-4"
         />
 
-        {/* Tableau */}
         <table className="w-full border text-left">
           <thead>
             <tr className="bg-gray-100">
               <th className="p-2 border">Nom</th>
               <th className="p-2 border">Prénom</th>
               <th className="p-2 border">Adresse</th>
-              <th className="p-2 border">Statut</th>
               <th className="p-2 border text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredTechnicians.map(tech => (
-              <tr key={tech.id} className="hover:bg-gray-50">
-                <td className="p-2 border">{tech.nom}</td>
-                <td className="p-2 border">{tech.prenom}</td>
-                <td className="p-2 border">{tech.adresse}</td>
-                <td className="p-2 border">
-                  {tech.status ? (
-                    <span className="text-green-600 font-semibold">Disponible</span>
-                  ) : (
-                    <span className="text-red-500 font-semibold">Occupé</span>
-                  )}
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={4} className="p-4 text-center text-gray-500">
+                  Aucun utilisateur trouvé.
                 </td>
+              </tr>
+            )}
+            {filteredUsers.map(user => (
+              <tr key={user._id} className="hover:bg-gray-50">
+                <td className="p-2 border">{user.nom}</td>
+                <td className="p-2 border">{user.prenom}</td>
+                <td className="p-2 border">{user.adresse}</td>
                 <td className="p-2 border text-center space-x-2">
                   <button
-                    onClick={() => handleEdit(tech.id)}
+                    onClick={() => handleEdit(user)}
                     className="bg-yellow-400 hover:bg-yellow-500 text-white py-1 px-2 rounded text-sm"
                   >
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDelete(tech.id)}
+                    onClick={() => handleDelete(user._id)}
                     className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-sm"
                   >
                     Supprimer
@@ -167,11 +188,6 @@ const Technicians = () => {
                 </td>
               </tr>
             ))}
-            {filteredTechnicians.length === 0 && (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">Aucun technicien trouvé.</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -179,4 +195,4 @@ const Technicians = () => {
   )
 }
 
-export default Technicians
+export default Technicien

@@ -20,7 +20,7 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className="bg-indigo-900 text-white p-4">
+    <header className="bg-[#1c434e] text-white p-4">
       <h1 className="text-lg font-semibold mt-1">{dynamicTitle()}</h1>
     </header>
   )
